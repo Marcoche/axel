@@ -1,10 +1,21 @@
 /* ***** BEGIN LICENSE BLOCK *****
  *
- * @COPYRIGHT@
+ * Copyright (C) 2009, 2010, 2011  Stéphane Sire
  *
- * This file is part of the Adaptable XML Editing Library (AXEL), version @VERSION@ 
+ * This file is part of the Adaptable XML Editing Library (AXEL), version 1.1.2-beta 
  *
- * @LICENSE@
+ * Adaptable XML Editing Library (AXEL) is free software ; you can redistribute it 
+ * and/or modify it under the terms of the GNU Lesser General Public License (the "LGPL")
+ * as published by the Free Software Foundation ; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * The library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY ; 
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this library ; 
+ * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, 
+ * Boston, MA 02111-1307 USA.
  *
  * Web site : http://media.epfl.ch/Templates/
  * 
@@ -186,8 +197,9 @@ xtiger.util.Form.prototype = {
 		return (this.status == 1);		
 	},
 	
-	// Loads XML data into a template from a string
+	// Loads JSON data into a template from a string
 	loadDataFromString : function (str, logger) {
+		var str = jsontoxml(str,'');
 		var dataSource = new xtiger.util.DOMDataSource ();
 		if (dataSource.initFromString (str)) {
 			this.loadData(dataSource, logger);
@@ -234,6 +246,7 @@ xtiger.util.Form.prototype = {
 				} else {
 					var res = xhr.responseText;
 					res = res.replace(/^<\?xml\s+version\s*=\s*(["'])[^\1]+\1[^?]*\?>/, ""); // bug 336551 MDC
+					res = jsontoxml(res,'')
 					xtiger.cross.log('warning', 'attempt to use string parser on ' + url + ' instead of responseXML');
 					if (! dataSource.initFromString(res)) { // second trial
 						this._report (0, 'failed to create data source for data from file ' + url + '. Most probably no documentElement', logger);
@@ -320,3 +333,134 @@ xtiger.util.Form.prototype = {
 	}
 	
 }	
+
+// Transform JSON object into a string containing XML data
+// encapsulate loading function
+// @arg: this is the JSON object
+// @text: this the begining string of the output. can be empty
+// @return: string containing XML
+function jsontoxml(arg, text) {	
+		arg = 'var newstr = '+arg;
+		eval(arg);
+		return loading(newstr, text, '', false);
+}
+
+// Transform JSON object into a string containing XML data	
+// @arg: this is the JSON object
+// @text: this the begining string of the output. can be empty
+// @lasttag: when call have to be empty string
+// @isempty: init false. use to detect auto-closing's tags
+// @return: string containing XML
+function loading(arg, text, lasttag, isempty){
+	var $text = '';
+	var nbAtt = 0;
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle != "$text" && cle.charAt(0) == '$'){
+				nbAtt++;
+			}
+		}
+	}
+	
+	
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle == "$text"){
+				text += arg[cle];
+			} else if(cle.charAt(0) == '$'){
+				nbAtt--;
+				text += ''+cle.substring(1)+'=\"'+arg[cle]+'\" ';
+				if(nbAtt == 0 && !isempty){
+					text += '>';
+				}
+			}
+			
+		}
+		
+		var isnull = isNull(arg[cle]);
+		
+		if(typeof(arg[cle]) == 'object' && !IsArray(arg[cle])){
+			if(haveAttribute(arg[cle])){
+				if(isnull) {
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = loading(arg[cle], text, cle, true);
+					text += ' />\n';
+				} else {
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = loading(arg[cle], text, cle, false);
+					text += '</'+cle+'>\n';
+				}
+			} else {
+				if(isnull) {
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = loading(arg[cle], text, cle, true);
+					text += ' />\n';
+				} else {
+					text += $text;
+					text += '\n<'+cle+'>';
+					text = loading(arg[cle], text, cle, false);
+					text += '</'+cle+'>\n';
+				}
+			}
+		} else if(IsArray(arg[cle])){
+			for(var i = 0; i < arg[cle].length; i++){
+				if(haveAttribute(arg[cle])){
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = loading(arg[cle][i], text, cle, false);
+					text += '</'+cle+'>\n';
+				} else {
+					text += $text;
+					text += '\n<'+cle+'>';
+					text = loading(arg[cle][i], text, cle, false);
+					text += '</'+cle+'>\n';
+				}
+			}
+		}
+	}
+	return text;
+}
+
+// Check for attributes
+function haveAttribute(arg){
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle != "$text"){
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+	return false;
+}
+
+// Check for empty autoclosing tag
+function isNull(arg){
+	
+	var att = 0;
+	var item = 0;
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle != "$text" && cle.charAt(0) == '$'){
+				att++;
+			}
+		}
+		item++;
+	}
+	if(item == att){
+		return true;
+	} else {
+		return false;
+	}
+}
+
+// Check whether an object is an array
+function IsArray(array) {
+	return !!(array && array.constructor == Array);
+}
+
+	

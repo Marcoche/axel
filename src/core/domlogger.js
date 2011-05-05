@@ -1,10 +1,21 @@
 /* ***** BEGIN LICENSE BLOCK *****
  *
- * @COPYRIGHT@
+ * Copyright (C) 2009, 2010, 2011  Stéphane Sire
  *
- * This file is part of the Adaptable XML Editing Library (AXEL), version @VERSION@ 
+ * This file is part of the Adaptable XML Editing Library (AXEL), version 1.1.2-beta 
  *
- * @LICENSE@
+ * Adaptable XML Editing Library (AXEL) is free software ; you can redistribute it 
+ * and/or modify it under the terms of the GNU Lesser General Public License (the "LGPL")
+ * as published by the Free Software Foundation ; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * The library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY ; 
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this library ; 
+ * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, 
+ * Boston, MA 02111-1307 USA.
  *
  * Web site : http://media.epfl.ch/Templates/
  * 
@@ -78,54 +89,150 @@ xtiger.util.PseudoNode.prototype = {
 	dumpAttributes : function () {
 		var text = '';
 		for (var k in this.attributes) {
-			text += ' ';
+			text += ' "$';
 			text += k;
-			text += '="';
-			text += xtiger.util.encodeEntities(this.attributes[k]);
-			text += '"';												
+			text += '":"';
+			var temp = xtiger.util.encodeEntities(this.attributes[k]);
+			temp = temp.replace('"','\"');
+			text += temp;
+			text += '", ';												
 		}
 		return text;
 	},                           
 
 	// Indented (and recursive) dump method
-	dump : function (level) {   
+	dump : function (level, repeat, nbNext, nbRepeat) {
 		if (xtiger.util.PseudoNode.TEXT_NODE == this.type) {
 			return xtiger.util.encodeEntities(this.content);
-		} else {    
-			var text = this.getIndentForLevel(level); // copy indentation string
+		} else {
+		  var text = '';
+		  
+			// on detect les repeats
+			var repeatNext = false;
+			var repeatNumber = 0;
+			var repeatMax = 0;
+			var repeatList = [];
+			var isInList = false;
+			
+			if(this.content && this.content.length > 0) {
+				for(var k = 0; k < this.content.length; k++) {
+					for(var j = 0; j < this.content.length; j++) {
+		 		 		if(k != j){
+		 		 			if(this.content[k].name == this.content[j].name){
+		 		 				repeatNext = true;
+		 		 				repeatNumber++;
+		 		 			}
+		 		 		}
+		 	 		}
+		 	 		if(repeatNext){
+		 		 		isInList = false;
+		 		 		for(var l = 0; l < repeatList.length; l++){
+		 		 			if(repeatList[l][0] == this.content[k].name){
+		 		 				isInList = true;
+		 		 			}
+						}
+						if(!isInList){
+		 	 				repeatList.push( [ this.content[k].name, repeatNext, repeatNumber+1, k]);
+		 	 				//alert(this.content[k].name);
+		 	 				//alert(repeatNext);
+		 	 				//alert(repeatNumber+1);
+		 	 				//alert(k);
+		 	 				//alert('repeat: '+this.content[k].name+' '+(repeatNumber+1)+' '+k);
+		 	 			}
+		 	 		}
+		 	 		repeatNumber = 0;
+		 	 		repeatMax = 0;
+		 	 	}
+		  }
+		  repeatMax = repeatNumber+1;
+		  repeatNumber = 1;
+		  
+		  
+		  if(level == 0) {
+		  text += '{ ';
+		  }
+			text += this.getIndentForLevel(level); // copy indentation string
 			if (this.content) {
 				// opening tag
-				text += '<';
-	      		text += this.name;   
+				
+				if(!repeat){
+					text += '"';
+					text += this.name;
+				}
+				if(repeat && nbNext == 1) {
+					text += '"';
+					text += this.name;
+					text += '": [ { ';
+				} else if (repeat && nbNext != 1) {
+					text += '{ ';
+				} else {
+					text += '": { ';
+				}
         		if (this.attributes) {
 					text += this.dumpAttributes ();
+					text += '';
 				}
-				text += '>'; 
-				if (this.content instanceof Array) {   
+				text += '';
+				if (this.content instanceof Array) {
 					text += xtiger.util.PseudoNode.NEWLINE;	 
+					var repeatLast = 0;
 					for (var i = 0; i < this.content.length; i++) {
-						text += this.content[i].dump(level + 1); 
+						if(repeatNext){
+							// TODO, pour chaque repetition, passer les bons arguments.
+							for(var m = 0; m < repeatList.length; m++){
+								if(repeatList[m][3] == i){
+									repeatLast = repeatList[m][2];
+									repeatMax = repeatList[m][2];
+								}
+							}
+							
+							if(repeatLast == 0){
+								text += this.content[i].dump(level + 1, false, 0, 0);
+							} else {
+								text += this.content[i].dump(level + 1, repeatNext, repeatNumber, repeatMax);
+								if(repeatNumber < repeatMax) {
+									repeatNumber++;
+								} else {
+									repeatLast = 0;
+									repeatNumber = 1;
+									repeatMax = 0;
+								}
+							}
+						} else {
+							text += this.content[i].dump(level + 1, false, 0, 0);
+						}
 					}			                           
 					text += this.getIndentForLevel(level);
 				} else {                      
-				 	// only one children, this is a text per construction, do not insert NEWLINE					
+				 	// only one children, this is a text per construction, do not insert NEWLINE	
+					text += '"$text":"';				
 					text += xtiger.util.encodeEntities(this.content.content); // short circuit recursive call					
+					text += '"';
 				} 
 				// closing tag;  
-				text += '</';
-	      text += this.name;
-				text += '>';				
+				//text += '</';
+	      //text += this.name;
+	      if(repeat && nbNext == nbRepeat) {
+					text += ' } ], ';
+				} else {
+					text += ' },';
+				}				
 			} else { // empty tag   
-				text += '<';
-	      text += this.name;    
+				text += '"';
+	      text += this.name;
+				text += '": { ';
         if (this.attributes) {
 					text += this.dumpAttributes ();
+					text += '';
 				} else if (this.discard) {
 					return ''; // optional node which is empty
 				}
-				text += '/>';                  
+				text += '}, ';
 			}                                        
-			text += xtiger.util.PseudoNode.NEWLINE;	 
+			text += xtiger.util.PseudoNode.NEWLINE;	
+			if(level == 0) {
+		  text += '}';
+		  }
 			return text;
 		}
 	}
@@ -227,13 +334,13 @@ xtiger.util.DOMLogger.prototype = {
 	_dump : function (target, level) {
 		if (target == 'document') {
 			if (this.root) {
-				return this.root.dump(level);
+				return this.root.dump(level, false, 0, 0);
 			} else {
 				return xtiger.util.PseudoNode.prototype.indent[level] + '<document/>\n'; // FIXME: use xt:head label
 			}
 		} else {
 			if (this.flow[target]) {
-				return this.flow[target][0].dump(level); 
+				return this.flow[target][0].dump(level, false, 0, 0);
 			} else {
 				return xtiger.util.PseudoNode.prototype.indent[level] + '<' +  target + '/>\n';
 			}			
