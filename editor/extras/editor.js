@@ -182,6 +182,7 @@ function viewerApp (path, defaultTemplates) {
 		// names MUST match radio button values in UI !
 		this.loaders = {
 			'standard' : xtiger.editor.BasicLoader ? new xtiger.editor.BasicLoader() : undefined,
+			'json' : xtiger.editor.BasicLoader ? new xtiger.editor.BasicLoader() : undefined,
 			'html' : xtiger.editor.HTMLLoader ? new xtiger.editor.HTMLLoader() : undefined,
 			'robust' : xtiger.editor.RobustLoader ? new xtiger.editor.RobustLoader() : undefined
 		};
@@ -191,8 +192,9 @@ function viewerApp (path, defaultTemplates) {
 		this.serializers = {
 			'standard' : std,
 			'html' : xtiger.editor.HTMLSerializer ? new xtiger.editor.HTMLSerializer() : undefined,
-			'robust' : std,                                           
-			'schema' : xtiger.editor.SchemaSerializer ? new xtiger.editor.SchemaSerializer() : undefined
+			'robust' : std,
+			'schema' : xtiger.editor.SchemaSerializer ? new xtiger.editor.SchemaSerializer() : undefined,
+			'json' : xtiger.editor.JSONSerializer ? new xtiger.editor.JSONSerializer () : undefined
 		}
 		
 		// Event Handler used to monitor when the iframe has been loaded with a template
@@ -375,7 +377,11 @@ viewerApp.prototype = {
 		if (algo && this.checkTemplate ()) {                                           
 			log = new xtiger.util.LogWin ("XML instance data", 400, 600, (algo != 'html'));
 			this.curForm.setSerializer(this.serializers[algo]);
-			log.dump(this.curForm);
+			if(algo != 'json'){
+				log.dump(this.curForm);
+			} else {
+				log.dumpjson(this.curForm);
+			}
 		}
 	},	              
 	       
@@ -503,8 +509,17 @@ viewerApp.prototype = {
 			var loader = this.getPreferredLoader();
 			if (! loader)	return;			
 			this.curForm.setLoader(loader);
-			if (! this.curForm.loadDataFromString(data)) {
-				this.log (this.curForm.msg, 1);
+			var prefs = document.forms["formUrl"].elements["algorithm"][3].checked;
+			if(!prefs){
+				if (! this.curForm.loadDataFromString(data)) {
+					this.log (this.curForm.msg, 1);
+				}
+			} else {
+				data = "var datajson = "+data;
+				eval(data);
+				if (! this.curForm.loadDataFromJSON(datajson)) {
+					this.log (this.curForm.msg, 1);
+				}
 			}
 		}	
 	},	      

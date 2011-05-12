@@ -1,10 +1,21 @@
 /* ***** BEGIN LICENSE BLOCK *****
  *
- * @COPYRIGHT@
+ * Copyright (C) 2009, 2010, 2011  Stéphane Sire
  *
- * This file is part of the Adaptable XML Editing Library (AXEL), version @VERSION@ 
+ * This file is part of the Adaptable XML Editing Library (AXEL), version 1.1.2-beta 
  *
- * @LICENSE@
+ * Adaptable XML Editing Library (AXEL) is free software ; you can redistribute it 
+ * and/or modify it under the terms of the GNU Lesser General Public License (the "LGPL")
+ * as published by the Free Software Foundation ; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * The library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY ; 
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this library ; 
+ * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, 
+ * Boston, MA 02111-1307 USA.
  *
  * Web site : http://media.epfl.ch/Templates/
  * 
@@ -84,17 +95,12 @@ xtiger.util.decodeParameters = function (aString, aParams) {
 		return;
 	var _tokens = aString.split(';');
 	for (var _i = 0; _i < _tokens.length; _i++) {
-		var pos =  _tokens[_i].indexOf('=');
-		if (pos > 0) {
-			var _parsedTok = _tokens[_i].substr(0, pos);
-			var _key = _parsedTok.replace(/^\s+/, '').replace(/\s+$/, ''); // Trim    
-			if (_key.length > 0) {
-				if (_key == 'class') { // pb with 'class' key in js on Safari
-				  _key = 'hasClass';
-				}
-				aParams[_key] = _tokens[_i].substr(pos + 1).replace(/^\s+/, '').replace(/\s+$/, '');				
-		    }
-	    } // FIXME: raise a warning (?)
+		var _parsedTok = _tokens[_i].split('=');
+		var _key = _parsedTok[0].replace(/^\s*/, '').replace(/\s*$/, ''); // Trim    
+		if (_key == 'class') { // pb with 'class' key in js on Safari
+		  _key = 'hasClass';
+		}
+		aParams[_key] = _parsedTok[1];
 	}
 }  
 

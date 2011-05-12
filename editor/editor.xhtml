@@ -72,6 +72,12 @@ Author: Stephane Sire
 		<script type="text/javascript" src="../contribs/src/schemas/schemalogger.js"></script>
 		<script type="text/javascript" src="../contribs/src/schemas/schemaserializer.js"></script>
 		
+		<!-- Contribs JSON -->
+		<script type="text/javascript" src="../contribs/json/src/jsondatasource.js"></script>
+		<script type="text/javascript" src="../contribs/json/src/jsonlogger.js"></script>
+		<script type="text/javascript" src="../contribs/json/src/jsonserializer.js"></script>
+
+		
 		<!-- optional services -->
     <!-- <script type="text/javascript" src="../src/filters/signature.js"></script> -->
 		<script type="text/javascript" src="../src/services/service.js"></script>
@@ -162,11 +168,13 @@ Author: Stephane Sire
 							onclick="appController.hidePreferences()"/>
 						<span style="position: absolute; right: 30px">
 							<input type="radio" value="standard" name="algorithm" checked="true"/>
-							<label for="robust">JSON</label>
+							<label for="robust">Std</label>
 							<input type="radio" value="html" name="algorithm"/>
 							<label for="html">Html</label>
 							<input type="radio" value="robust" name="algorithm"/>
 							<label for="robust">Robust</label>
+							<input type="radio" value="json" name="algorithm"/>
+							<label for="json">JSON</label>
 						</span>
 					</p>
 					<p>

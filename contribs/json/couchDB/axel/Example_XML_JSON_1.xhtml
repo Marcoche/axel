@@ -1,0 +1,160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xt="http://ns.inria.org/xtiger">
+<head>
+
+
+  <!-- Use UTF-8 and omit xml protocol at the top for IE -->
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=8;" />
+  <meta name="description" content="XTiger XML document template" />
+  <meta name="keywords" content="template, XTiger" />
+
+  <title>XTiger XML and JSON with AXEL tutorial</title>
+	
+  <!-- See Step 2 -->
+  <script type="text/javascript" src="axel/axel.js"></script>
+
+  <!-- Inclusion for couchDB -->
+  <script src="../script/couch.js" type="text/javascript" charset="utf-8"></script>
+	<script src="../script/json2.js" type="text/javascript" charset="utf-8"></script>
+	<script src="axel_couchdb.js" type="text/javascript" charset="utf-8"></script>
+	<script src="axel/jsondatasource.js" type="text/javascript" charset="utf-8"></script>
+	<script src="axel/jsonlogger.js" type="text/javascript" charset="utf-8"></script>
+	<!-- <script src="json.js" type="text/javascript" charset="utf-8"></script> -->
+  
+<link rel="stylesheet" href="axel/axel.css" type="text/css"></link>
+<script type="text/javascript">
+
+	///////////
+	// INIT  //
+	///////////
+  var form;
+  function init() {
+    form = new xtiger.util.Form('axel/bundles');
+    form.setTemplateSource(document);
+    form.enableTabGroupNavigation();
+    if (! form.transform()) { alert(this .form.msg); }
+  }
+  xtdom.addEventListener(window, 'load', init, false);
+
+	///////////
+	// LOAD  //
+	///////////
+  function load() {
+  	var logger = new xtiger.util.Logger();
+  	
+  	//JSON to XML data got from couchDB
+  	//Warning brut data in string are removed by AXEL !!
+		//var data = document.getElementById('save').value;
+		var data = loadCouchDB('exemple');
+		//var data = '{ "document": {"persons": {"name": { "$text":"ggg" },},},}';
+		//alert(data);
+		
+		if (form.loadDataFromJSON(data, logger)) {
+		    alert('Data loaded');
+		}
+		if (logger.inError()) { alert(logger.printErrors()); }
+		
+  }
+  
+	///////////
+	// SAVE  //
+	///////////
+  function save() {
+  	var dump = new xtiger.util.JSONLogger ();
+		form.serializeData (dump);
+		var jsonString = dump.dump();
+		//var n = document.getElementById('content');
+		document.getElementById('save').value = jsonString;
+		saveCouchDB('exemple', jsonString);
+  }
+  
+  
+  ////////////////////////////////////
+  // Loading function from couchDB  //
+  ////////////////////////////////////
+  function loadCouchDB(templateName){
+  	
+  	var couch = new couchDB_util();
+		couch.connect("test");
+  	
+  	var rep_1 = couch.listeTemplate();
+	
+		var response;
+	
+		for(var i in rep_1.rows){
+			if(rep_1.rows[i].id == templateName){
+				response = couch.loadTemplate(rep_1.rows[i].id);
+				response = response.root;//.toJSONString();
+				return response;
+			}
+		}
+  }
+	
+	///////////////////////////////////
+	// Saving function from couchDB  //
+	///////////////////////////////////
+	function saveCouchDB(templateName, jsonData){
+		var couch = new couchDB_util();
+		couch.connect("test");
+		
+		jsonData = "var jsonObject = "+jsonData;
+		eval(jsonData);
+		
+		var rev = couch.loadTemplate(templateName)._rev;
+		couch.updateTemplate(templateName, jsonObject, rev);
+	}
+	
+  
+
+</script>
+
+
+
+</head>
+<body>
+
+
+<a href="javascript:load()">Load</a>
+<a href="javascript:save()">Save</a>
+<br />
+<textarea id="save" rows="20" cols="80">test</textarea>
+
+<br />
+
+
+  <div id="document">
+
+
+	<xt:head version="1.1" templateVersion="1.0" label="greetings">
+    <xt:component name="personList">
+      <ul>
+        <xt:repeat minOccurs="0" maxOccurs="*" label="persons">
+          <li>
+            <xt:use types="text" param="shape=parent-75px;type=textarea"
+               label="name">name</xt:use><xt:menu-marker/>
+          </li>
+        </xt:repeat>
+      </ul>
+    </xt:component>
+  </xt:head>
+
+
+
+  <xt:use types="personList"/>
+		
+  </div>
+
+
+</body>
+</html>
+
+
+
+
+
+
+

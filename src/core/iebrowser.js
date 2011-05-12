@@ -1,10 +1,21 @@
 /* ***** BEGIN LICENSE BLOCK *****
  *
- * @COPYRIGHT@
+ * Copyright (C) 2009, 2010, 2011  Stéphane Sire
  *
- * This file is part of the Adaptable XML Editing Library (AXEL), version @VERSION@ 
+ * This file is part of the Adaptable XML Editing Library (AXEL), version 1.1.2-beta 
  *
- * @LICENSE@
+ * Adaptable XML Editing Library (AXEL) is free software ; you can redistribute it 
+ * and/or modify it under the terms of the GNU Lesser General Public License (the "LGPL")
+ * as published by the Free Software Foundation ; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * The library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY ; 
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this library ; 
+ * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, 
+ * Boston, MA 02111-1307 USA.
  *
  * Web site : http://media.epfl.ch/Templates/
  * 
@@ -71,32 +82,23 @@ if (xtiger.cross.UA.IE) {
 	}
 	
 	// see http://www.alistapart.com/articles/crossbrowserscripting
-	xtdom.importNode = function(doc, node, deep) {  
-	  var copy;
+	xtdom.importNode = function(doc, node, deep) {
 		switch (node.nodeType) {
-			case xtdom.ELEMENT_NODE:                                  
-				// remove prefix from node name as in my last attempt with IE8 appendChild 
-				// threw an exception with the node created with a prefixed name
-				var nspos = node.nodeName.indexOf(':');
-				var nodeName = (nspos == -1) ? node.nodeName : node.nodeName.substr(nspos + 1);
-				var newNode = xtdom.createElement(doc, nodeName);
-				// copy attributes								
-				if (node.attributes && node.attributes.length > 0) 
+			case xtdom.ELEMENT_NODE:
+				var newNode = xtdom.createElement(doc, node.nodeName);
+				if (node.attributes && node.attributes.length > 0) // copy attributes
 					for (var i = 0; i < node.attributes.length; i++)
 						xtdom.setAttribute(newNode, node.attributes[i].name, node.attributes[i].value);
 				if (deep && node.childNodes && node.childNodes.length > 0) // copy children (recursion)
-					for (var i = 0; i < node.childNodes.length; i++) {
-					  copy = xtdom.importNode(doc, node.childNodes[i], deep);
-					  if (copy) newNode.appendChild(copy);
-					}
+					for (var i = 0; i < node.childNodes.length; i++)
+						newNode.appendChild( xtdom.importNode(doc, node.childNodes[i], deep) );
 				return newNode;
 				break;
 			case xtdom.TEXT_NODE:
 			case xtdom.CDATA_SECTION_NODE:
+			case xtdom.COMMENT_NODE:
 				return xtdom.createTextNode(doc, node.nodeValue);
-			  break;                                           
-  		case xtdom.COMMENT_NODE: // skip comment nodes
-				break;                                           
+				break;
 		}
 	}		
 	

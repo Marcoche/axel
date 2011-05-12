@@ -197,11 +197,21 @@ xtiger.util.Form.prototype = {
 		return (this.status == 1);		
 	},
 	
-	// Loads JSON data into a template from a string
+	// Loads XML data into a template from a string
 	loadDataFromString : function (str, logger) {
-		var str = jsontoxml(str,'');
 		var dataSource = new xtiger.util.DOMDataSource ();
 		if (dataSource.initFromString (str)) {
+			this.loadData(dataSource, logger);
+		} else {
+			this._report (0, 'failed to parse string data source', logger);
+		}
+		return (this.status == 1);
+	},
+	
+	// Loads JSON data into a template from an Object JSON
+	loadDataFromJSON : function (jsonObj, logger) {
+		var dataSource = new xtiger.util.JSONDataSource ();
+		if (dataSource.initFromObject (jsonObj)) {
 			this.loadData(dataSource, logger);
 		} else {
 			this._report (0, 'failed to parse string data source', logger);
@@ -246,7 +256,6 @@ xtiger.util.Form.prototype = {
 				} else {
 					var res = xhr.responseText;
 					res = res.replace(/^<\?xml\s+version\s*=\s*(["'])[^\1]+\1[^?]*\?>/, ""); // bug 336551 MDC
-					res = jsontoxml(res,'')
 					xtiger.cross.log('warning', 'attempt to use string parser on ' + url + ' instead of responseXML');
 					if (! dataSource.initFromString(res)) { // second trial
 						this._report (0, 'failed to create data source for data from file ' + url + '. Most probably no documentElement', logger);
@@ -333,134 +342,3 @@ xtiger.util.Form.prototype = {
 	}
 	
 }	
-
-// Transform JSON object into a string containing XML data
-// encapsulate loading function
-// @arg: this is the JSON object
-// @text: this the begining string of the output. can be empty
-// @return: string containing XML
-function jsontoxml(arg, text) {	
-		arg = 'var newstr = '+arg;
-		eval(arg);
-		return loading(newstr, text, '', false);
-}
-
-// Transform JSON object into a string containing XML data	
-// @arg: this is the JSON object
-// @text: this the begining string of the output. can be empty
-// @lasttag: when call have to be empty string
-// @isempty: init false. use to detect auto-closing's tags
-// @return: string containing XML
-function loading(arg, text, lasttag, isempty){
-	var $text = '';
-	var nbAtt = 0;
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle != "$text" && cle.charAt(0) == '$'){
-				nbAtt++;
-			}
-		}
-	}
-	
-	
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle == "$text"){
-				text += arg[cle];
-			} else if(cle.charAt(0) == '$'){
-				nbAtt--;
-				text += ''+cle.substring(1)+'=\"'+arg[cle]+'\" ';
-				if(nbAtt == 0 && !isempty){
-					text += '>';
-				}
-			}
-			
-		}
-		
-		var isnull = isNull(arg[cle]);
-		
-		if(typeof(arg[cle]) == 'object' && !IsArray(arg[cle])){
-			if(haveAttribute(arg[cle])){
-				if(isnull) {
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = loading(arg[cle], text, cle, true);
-					text += ' />\n';
-				} else {
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = loading(arg[cle], text, cle, false);
-					text += '</'+cle+'>\n';
-				}
-			} else {
-				if(isnull) {
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = loading(arg[cle], text, cle, true);
-					text += ' />\n';
-				} else {
-					text += $text;
-					text += '\n<'+cle+'>';
-					text = loading(arg[cle], text, cle, false);
-					text += '</'+cle+'>\n';
-				}
-			}
-		} else if(IsArray(arg[cle])){
-			for(var i = 0; i < arg[cle].length; i++){
-				if(haveAttribute(arg[cle])){
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = loading(arg[cle][i], text, cle, false);
-					text += '</'+cle+'>\n';
-				} else {
-					text += $text;
-					text += '\n<'+cle+'>';
-					text = loading(arg[cle][i], text, cle, false);
-					text += '</'+cle+'>\n';
-				}
-			}
-		}
-	}
-	return text;
-}
-
-// Check for attributes
-function haveAttribute(arg){
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle != "$text"){
-				return true;
-			} else {
-				return false;
-			}
-		}
-	}
-	return false;
-}
-
-// Check for empty autoclosing tag
-function isNull(arg){
-	
-	var att = 0;
-	var item = 0;
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle != "$text" && cle.charAt(0) == '$'){
-				att++;
-			}
-		}
-		item++;
-	}
-	if(item == att){
-		return true;
-	} else {
-		return false;
-	}
-}
-
-// Check whether an object is an array
-function IsArray(array) {
-	return !!(array && array.constructor == Array);
-}
-
-	

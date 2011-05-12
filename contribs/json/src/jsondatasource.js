@@ -28,7 +28,7 @@
  * This implementation encapsulates an XML Document object containing the data, which is either
  * passed directly (initFromDocument) or which can be passed from a string (initFromString)
  */
-xtiger.util.DOMDataSource = function (sources) {	
+xtiger.util.JSONDataSource = function (sources) {	
 	var d; // XML document
 	this.xml = null; // main XML data
 	this.flow = {}; // seperate flows
@@ -47,7 +47,7 @@ xtiger.util.DOMDataSource = function (sources) {
 	}
 }
 
-xtiger.util.DOMDataSource.prototype = {
+xtiger.util.JSONDataSource.prototype = {
 
 	// Return true of the data source has been initialized, false otherwise
 	hasData : function () {
@@ -110,7 +110,9 @@ xtiger.util.DOMDataSource.prototype = {
 	 * @param str
 	 * @return
 	 */
-	initFromString : function (str) {
+	initFromObject : function (obj) {
+		// WE Transform from JSON str to XML str
+		var str = this.jsontoxml(obj,'');
 		var res = true;
 		try {
 			var parser = xtiger.cross.makeDOMParser ();
@@ -352,6 +354,137 @@ xtiger.util.DOMDataSource.prototype = {
 			}
 		}
 		return -1;
-	}		
+	},
+	
+// Transform JSON object into a string containing XML data
+// encapsulate loading function
+// @arg: this is the JSON object
+// @text: this the begining string of the output. can be empty
+// @return: string containing XML
+jsontoxml : function (arg, text) {	
+		//arg = 'var newstr = '+arg+';';
+		//eval(arg);
+		//return this.loading(newstr, text, '', false);
+		return this.loading(arg, text, '', false);
+},
+
+// Transform JSON object into a string containing XML data	
+// @arg: this is the JSON object
+// @text: this the begining string of the output. can be empty
+// @lasttag: when call have to be empty string
+// @isempty: init false. use to detect auto-closing's tags
+// @return: string containing XML
+loading : function (arg, text, lasttag, isempty){
+	var $text = '';
+	var nbAtt = 0;
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle != "$text" && cle.charAt(0) == '$'){
+				nbAtt++;
+			}
+		}
+	}
+	
+	
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle == "$text"){
+				text += arg[cle];
+			} else if(cle.charAt(0) == '$'){
+				nbAtt--;
+				text += ''+cle.substring(1)+'=\"'+arg[cle]+'\" ';
+				if(nbAtt == 0 && !isempty){
+					text += '>';
+				}
+			}
+			
+		}
+		
+		var isnull = this.isNull(arg[cle]);
+		
+		if(typeof(arg[cle]) == 'object' && !this.IsArray(arg[cle])){
+			if(this.haveAttribute(arg[cle])){
+				if(isnull) {
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = this.loading(arg[cle], text, cle, true);
+					text += ' />\n';
+				} else {
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = this.loading(arg[cle], text, cle, false);
+					text += '</'+cle+'>\n';
+				}
+			} else {
+				if(isnull) {
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = this.loading(arg[cle], text, cle, true);
+					text += ' />\n';
+				} else {
+					text += $text;
+					text += '\n<'+cle+'>';
+					text = this.loading(arg[cle], text, cle, false);
+					text += '</'+cle+'>\n';
+				}
+			}
+		} else if(this.IsArray(arg[cle])){
+			for(var i = 0; i < arg[cle].length; i++){
+				if(this.haveAttribute(arg[cle])){
+					text += $text;
+					text += '\n<'+cle+' ';
+					text = this.loading(arg[cle][i], text, cle, false);
+					text += '</'+cle+'>\n';
+				} else {
+					text += $text;
+					text += '\n<'+cle+'>';
+					text = this.loading(arg[cle][i], text, cle, false);
+					text += '</'+cle+'>\n';
+				}
+			}
+		}
+	}
+	return text;
+},
+
+// Check for attributes
+haveAttribute : function (arg){
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle != "$text"){
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+	return false;
+},
+
+// Check for empty autoclosing tag
+isNull : function (arg){
+	
+	var att = 0;
+	var item = 0;
+	for(var cle in arg){
+		if(typeof(arg[cle]) != 'object'){
+			if(cle != "$text" && cle.charAt(0) == '$'){
+				att++;
+			}
+		}
+		item++;
+	}
+	if(item == att){
+		return true;
+	} else {
+		return false;
+	}
+},
+
+// Check whether an object is an array
+IsArray : function (array) {
+	return !!(array && array.constructor == Array);
+}
+
 				
 } 

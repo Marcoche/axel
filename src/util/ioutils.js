@@ -1,10 +1,21 @@
 /* ***** BEGIN LICENSE BLOCK *****
  *
- * @COPYRIGHT@
+ * Copyright (C) 2009, 2010, 2011  Stéphane Sire
  *
- * This file is part of the Adaptable XML Editing Library (AXEL), version @VERSION@ 
+ * This file is part of the Adaptable XML Editing Library (AXEL), version 1.1.2-beta 
  *
- * @LICENSE@
+ * Adaptable XML Editing Library (AXEL) is free software ; you can redistribute it 
+ * and/or modify it under the terms of the GNU Lesser General Public License (the "LGPL")
+ * as published by the Free Software Foundation ; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * The library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY ; 
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+ * PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this library ; 
+ * if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, 
+ * Boston, MA 02111-1307 USA.
  *
  * Web site : http://media.epfl.ch/Templates/
  * 
@@ -77,17 +88,37 @@ xtiger.util.LogWin.prototype = {
 		var dump = new xtiger.util.DOMLogger ();
 		// form.setSerializer(new xtiger.editor.BasicSerializer ());
 		var data = form.serializeData (dump);
-		buffer = "<?xml version=\"1.0\"?>\n" // encoding="UTF-8" ?
+		//buffer = "<?xml version=\"1.0\"?>\n" // encoding="UTF-8" ?
+		buffer = '';
 		if (stylesheet) {
-			buffer += '<?xml-stylesheet type="text/xml" href="' + stylesheet + '"?>\n';
+			//buffer += '<?xml-stylesheet type="text/xml" href="' + stylesheet + '"?>\n';
 		}
 		if (template) {
-			buffer += '<?xtiger template="' + template + '" version="1.0" ?>\n';
+			//buffer += '<?xtiger template="' + template + '" version="1.0" ?>\n';
 		}                                           
 		buffer += dump.dump('*');
 		this.write(buffer);
 		this.close();			
 	},
+	
+	dumpjson : function (form, stylesheet, template) {
+		var buffer;
+		var dump = new xtiger.util.JSONLogger ();
+		// form.setSerializer(new xtiger.editor.BasicSerializer ());
+		var data = form.serializeData (dump);
+		//buffer = "<?xml version=\"1.0\"?>\n" // encoding="UTF-8" ?
+		buffer = '';
+		if (stylesheet) {
+			//buffer += '<?xml-stylesheet type="text/xml" href="' + stylesheet + '"?>\n';
+		}
+		if (template) {
+			//buffer += '<?xtiger template="' + template + '" version="1.0" ?>\n';
+		}
+		buffer += dump.dump('*');
+		this.write(buffer);
+		this.close();			
+	},
+	
 	transcode : function (text) {
 		var filter1 = text.replace(/</g, '&lt;');
 		var filter2 = filter1.replace(/\n/g, '<br/>');		
