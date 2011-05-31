@@ -23,7 +23,6 @@
 	<script src="axel_couchdb.js" type="text/javascript" charset="utf-8"></script>
 	<script src="axel/jsondatasource.js" type="text/javascript" charset="utf-8"></script>
 	<script src="axel/jsonlogger.js" type="text/javascript" charset="utf-8"></script>
-	<!-- <script src="json.js" type="text/javascript" charset="utf-8"></script> -->
   
 <link rel="stylesheet" href="axel/axel.css" type="text/css"></link>
 <script type="text/javascript">
@@ -41,18 +40,17 @@
   }
   xtdom.addEventListener(window, 'load', init, false);
 
-	///////////
-	// LOAD  //
-	///////////
-  function load() {
+	////////////////
+	// AXEL LOAD  //
+	////////////////
+  function load(dataName) {
   	var logger = new xtiger.util.Logger();
   	
   	//JSON to XML data got from couchDB
   	//Warning brut data in string are removed by AXEL !!
-		//var data = document.getElementById('save').value;
-		var data = loadCouchDB('carte resto');
-		//var data = '{ "document": {"persons": {"name": { "$text":"ggg" },},},}';
-		//alert(data);
+
+		var data = loadCouchDB(dataName);
+
 		
 		if (form.loadDataFromJSON(data, logger)) {
 		    alert('Data loaded');
@@ -61,35 +59,33 @@
 		
   }
 
-	///////////
-	// SAVE  //
-	///////////
-  function save() {
+	////////////////
+	// AXEL SAVE  //
+	////////////////
+  function save(dataName) {
   	var dump = new xtiger.util.JSONLogger ();
 		form.serializeData (dump);
 		var jsonString = dump.dump();
-		//var n = document.getElementById('content');
 		document.getElementById('save').value = jsonString;
-		saveCouchDB('carte resto', jsonString);
+		saveCouchDB(dataName, jsonString);
   }
-
 
   ////////////////////////////////////
   // Loading function from couchDB  //
   ////////////////////////////////////
-  function loadCouchDB(templateName){
+  function loadCouchDB(dataName){
   	
   	var couch = new couchDB_util();
 		couch.connect("test");
   	
-  	var rep_1 = couch.listeTemplate();
+  	var rep_1 = couch.listeTemplateData();
 	
 		var response;
 	
 		for(var i in rep_1.rows){
-			if(rep_1.rows[i].id == templateName){
-				response = couch.loadTemplate(rep_1.rows[i].id);
-				response = response.root;//.toJSONString();
+			if(rep_1.rows[i].id == dataName){
+				response = couch.loadData(rep_1.rows[i].id);
+				response = response.root;
 				return response;
 			}
 		}
@@ -98,19 +94,36 @@
 	///////////////////////////////////
 	// Saving function from couchDB  //
 	///////////////////////////////////
-	function saveCouchDB(templateName, jsonData){
+	function saveCouchDB(dataName, jsonData){
 		var couch = new couchDB_util();
 		couch.connect("test");
 		
 		jsonData = "var jsonObject = "+jsonData;
 		eval(jsonData);
 		
-		var rev = couch.loadTemplate(templateName)._rev;
-		couch.updateTemplate(templateName, jsonObject, rev);
+		var rev = couch.loadData(dataName)._rev;
+		couch.updateData(dataName, jsonObject, rev);
 	}
 	
-
-
+	//////////////
+	// SEARCH   //
+	//////////////
+	function searchWord(){
+	
+		var couch = new couchDB_util();
+		couch.connect("test");
+		
+		keyword = document.getElementById('searchword')['search'].value;
+		jsonData = couch.searchCouchDB(keyword);
+		
+		document.getElementById('result').innerHTML = "";
+		
+		for(var i in jsonData){
+			document.getElementById('result').innerHTML += jsonData[i];
+		}
+		
+		return false; // No submit
+	}
 
 </script>
 
@@ -402,18 +415,22 @@
 </head>
 <body>
 
+<form id="searchword" action="" onsubmit="return searchWord();">
+<input type="text" name="search" size="20" /><input type="submit" value="SEARCH" />
+</form>
+<br/>
+<div id="result">
 
-<a href="javascript:load()">Load</a>
-<a href="javascript:save()">Save</a>
+</div>
+<br/>
+<br/>
+<a href="javascript:load('default')">Load</a>
+<a href="javascript:save('default')">Save</a>
 <br />
-<textarea id="save" rows="20" cols="80">test</textarea>
-
 <br />
 
 
   <div id="document" align="center">
-
-
 
   <div class="menuBox">
     <h1 class="title"><xt:use types="text" label="title">Carte...</xt:use></h1>
@@ -424,13 +441,17 @@
       <p class="courseSeparator"></p>
     </xt:repeat>
   </div>
-
-
-
-
 	
   </div>
 
+<br />
+<br />
+  
+<div align="center">
+
+<textarea id="save" rows="20" cols="80">test</textarea>
+
+</div>
 
 </body>
 </html>

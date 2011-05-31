@@ -107,7 +107,7 @@ xtiger.util.PseudoNodeJSON.prototype = {
 		} else {
 		  var text = '';
 		
-			// on detect les repeats
+			// Here we detect AXEL simple repeat.
 			var repeatNext = false;
 			var repeatNumber = 0;
 			var repeatMax = 0;
@@ -133,17 +133,15 @@ xtiger.util.PseudoNodeJSON.prototype = {
 						}
 						if(!isInList){
 		 	 				repeatList.push( [ this.content[k].name, repeatNext, repeatNumber+1, k]);
-		 	 				//alert(this.content[k].name);
-		 	 				//alert(repeatNext);
-		 	 				//alert(repeatNumber+1);
-		 	 				//alert(k);
-		 	 				//alert('repeat: '+this.content[k].name+' '+(repeatNumber+1)+' '+k);
 		 	 			}
 		 	 		}
 		 	 		repeatNumber = 0;
 		 	 		repeatMax = 0;
 		 	 	}
 		  }
+		  
+		  // Then we call recursivly the dump depending on the type of element
+		  
 		  repeatMax = repeatNumber+1;
 		  repeatNumber = 1;
 		
@@ -155,20 +153,20 @@ xtiger.util.PseudoNodeJSON.prototype = {
 			if (this.content) {
 				// opening tag
 				
-				if(!repeat){
+				if(!repeat){ //Normal case without repeat (begin)
 					text += '"';
 					text += this.name;
 				}
-				if(repeat && nbNext == 1) {
+				if(repeat && nbNext == 1) { //Simple Repeat case (begin)
 					text += '"';
 					text += this.name;
 					text += '": [ { ';
-				} else if (repeat && nbNext != 1) {
+				} else if (repeat && nbNext != 1) { //Normal case again
 					text += '{ ';
-				} else {
+				} else { //Simple Repeat case again
 					text += '": { ';
 				}
-        		if (this.attributes) {
+        		if (this.attributes) { //Check for attribute and write them
 					text += this.dumpAttributes ();
 					text += '';
 				}
@@ -178,7 +176,7 @@ xtiger.util.PseudoNodeJSON.prototype = {
 					var repeatLast = 0;
 					for (var i = 0; i < this.content.length; i++) {
 						if(repeatNext){
-							// TODO, pour chaque repetition, passer les bons arguments.
+							// Simple Repeat case
 							for(var m = 0; m < repeatList.length; m++){
 								if(repeatList[m][3] == i){
 									repeatLast = repeatList[m][2];
@@ -186,9 +184,9 @@ xtiger.util.PseudoNodeJSON.prototype = {
 								}
 							}
 							
-							if(repeatLast == 0){
+							if(repeatLast == 0){ // Normal case: recursive dump
 								text += this.content[i].dump(level + 1, false, 0, 0);
-							} else {
+							} else { //Simple Repeat case: recursive dump
 								text += this.content[i].dump(level + 1, repeatNext, repeatNumber, repeatMax);
 								if(repeatNumber < repeatMax) {
 									repeatNumber++;
@@ -198,7 +196,7 @@ xtiger.util.PseudoNodeJSON.prototype = {
 									repeatMax = 0;
 								}
 							}
-						} else {
+						} else { // Normal case: recursive dump
 							text += this.content[i].dump(level + 1, false, 0, 0);
 						}
 					}			
@@ -210,14 +208,13 @@ xtiger.util.PseudoNodeJSON.prototype = {
 					text += '"';
 				}
 				// closing tag;
-				//text += '</';
-	      //text += this.name;
-	      if(repeat && nbNext == nbRepeat) {
+	      if(repeat && nbNext == nbRepeat) { //Simple repeat (close)
 					text += ' } ], ';
-				} else {
+				} else { // Normal (close)
 					text += ' },';
 				}				
-			} else { // empty tag
+			} else { // empty tag cases
+			// I consider no repeat case of empty elements
 				text += '"';
 	      text += this.name;
 				text += '": { ';

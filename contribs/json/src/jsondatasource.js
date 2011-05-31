@@ -356,135 +356,145 @@ xtiger.util.JSONDataSource.prototype = {
 		return -1;
 	},
 	
-// Transform JSON object into a string containing XML data
-// encapsulate loading function
-// @arg: this is the JSON object
-// @text: this the begining string of the output. can be empty
-// @return: string containing XML
-jsontoxml : function (arg, text) {	
-		//arg = 'var newstr = '+arg+';';
-		//eval(arg);
-		//return this.loading(newstr, text, '', false);
-		return this.loading(arg, text, '', false);
-},
-
-// Transform JSON object into a string containing XML data	
-// @arg: this is the JSON object
-// @text: this the begining string of the output. can be empty
-// @lasttag: when call have to be empty string
-// @isempty: init false. use to detect auto-closing's tags
-// @return: string containing XML
-loading : function (arg, text, lasttag, isempty){
-	var $text = '';
-	var nbAtt = 0;
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle != "$text" && cle.charAt(0) == '$'){
-				nbAtt++;
+	//////////////////
+	// JSON LOADER  //
+	//////////////////
+	
+	// Transform JSON object into a string containing XML data
+	// encapsulate loading function
+	// @arg: this is the JSON object
+	// @text: this the begining string of the output. can be empty
+	// @return: string containing XML
+	jsontoxml : function (arg, text) {	
+			return this.loading(arg, text, '', false);
+	},
+	
+	// Transform JSON object into a string containing XML data	
+	// @arg: this is the JSON object
+	// @text: this the begining string of the output. can be empty
+	// @lasttag: when call have to be empty string
+	// @isempty: init false. use to detect auto-closing's tags
+	// @return: string containing XML
+	loading : function (arg, text, lasttag, isempty){
+		var $text = '';
+		var nbAtt = 0;
+		
+		// Count the attributes if there's attributes
+		for(var cle in arg){
+			if(typeof(arg[cle]) != 'object'){
+				if(cle != "$text" && cle.charAt(0) == '$'){
+					nbAtt++;
+				}
 			}
 		}
-	}
-	
-	
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle == "$text"){
-				text += arg[cle];
-			} else if(cle.charAt(0) == '$'){
-				nbAtt--;
-				text += ''+cle.substring(1)+'=\"'+arg[cle]+'\" ';
-				if(nbAtt == 0 && !isempty){
-					text += '>';
+		
+		// Begining of "parsing" json object
+		for(var cle in arg){
+			if(typeof(arg[cle]) != 'object'){ // Check if it is a final node (tag's content)
+				if(cle == "$text"){
+					text += arg[cle];
+				} else if(cle.charAt(0) == '$'){
+					nbAtt--;
+					text += ''+cle.substring(1)+'=\"'+arg[cle]+'\" ';
+					if(nbAtt == 0 && !isempty){
+						text += '>';
+					}
 				}
+				
 			}
 			
-		}
-		
-		var isnull = this.isNull(arg[cle]);
-		
-		if(typeof(arg[cle]) == 'object' && !this.IsArray(arg[cle])){
-			if(this.haveAttribute(arg[cle])){
-				if(isnull) {
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = this.loading(arg[cle], text, cle, true);
-					text += ' />\n';
+			var isnull = this.isNull(arg[cle]);
+			
+			// Normal case without Repeat, recursive call on object
+			if(typeof(arg[cle]) == 'object' && !this.IsArray(arg[cle])){
+				if(this.haveAttribute(arg[cle])){ //Check for attributes
+					if(isnull) {
+						text += $text;
+						text += '\n<'+cle+' ';
+						text = this.loading(arg[cle], text, cle, true);
+						text += ' />\n';
+					} else {
+						text += $text;
+						text += '\n<'+cle+' ';
+						text = this.loading(arg[cle], text, cle, false);
+						text += '</'+cle+'>\n';
+					}
 				} else {
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = this.loading(arg[cle], text, cle, false);
-					text += '</'+cle+'>\n';
+					if(isnull) {
+						text += $text;
+						text += '\n<'+cle+' ';
+						text = this.loading(arg[cle], text, cle, true);
+						text += ' />\n';
+					} else {
+						text += $text;
+						text += '\n<'+cle+'>';
+						text = this.loading(arg[cle], text, cle, false);
+						text += '</'+cle+'>\n';
+					}
 				}
-			} else {
-				if(isnull) {
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = this.loading(arg[cle], text, cle, true);
-					text += ' />\n';
-				} else {
-					text += $text;
-					text += '\n<'+cle+'>';
-					text = this.loading(arg[cle], text, cle, false);
-					text += '</'+cle+'>\n';
+			} else if(this.IsArray(arg[cle])){ // Simple Repeat case, recursive call on object
+				for(var i = 0; i < arg[cle].length; i++){
+					if(this.haveAttribute(arg[cle])){ //Check for attributes
+						text += $text;
+						text += '\n<'+cle+' ';
+						text = this.loading(arg[cle][i], text, cle, false);
+						text += '</'+cle+'>\n';
+					} else {
+						text += $text;
+						text += '\n<'+cle+'>';
+						text = this.loading(arg[cle][i], text, cle, false);
+						text += '</'+cle+'>\n';
+					}
 				}
 			}
-		} else if(this.IsArray(arg[cle])){
-			for(var i = 0; i < arg[cle].length; i++){
-				if(this.haveAttribute(arg[cle])){
-					text += $text;
-					text += '\n<'+cle+' ';
-					text = this.loading(arg[cle][i], text, cle, false);
-					text += '</'+cle+'>\n';
-				} else {
-					text += $text;
-					text += '\n<'+cle+'>';
-					text = this.loading(arg[cle][i], text, cle, false);
-					text += '</'+cle+'>\n';
-				}
-			}
 		}
-	}
-	return text;
-},
-
-// Check for attributes
-haveAttribute : function (arg){
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle != "$text"){
-				return true;
-			} else {
-				return false;
-			}
-		}
-	}
-	return false;
-},
-
-// Check for empty autoclosing tag
-isNull : function (arg){
+		return text;
+	},
 	
-	var att = 0;
-	var item = 0;
-	for(var cle in arg){
-		if(typeof(arg[cle]) != 'object'){
-			if(cle != "$text" && cle.charAt(0) == '$'){
-				att++;
+	// Function that check if the arg have attributes
+	// @arg: object
+	// @return: true if arg have attribute, else false
+	haveAttribute : function (arg){
+		for(var cle in arg){
+			if(typeof(arg[cle]) != 'object'){
+				if(cle != "$text"){
+					return true;
+				} else {
+					return false;
+				}
 			}
 		}
-		item++;
-	}
-	if(item == att){
-		return true;
-	} else {
 		return false;
+	},
+	
+	// Function that check for empty autoclosing tag
+	// @arg: object
+	// @return: true if autoclosing, else false
+	isNull : function (arg){
+		
+		var att = 0;
+		var item = 0;
+		for(var cle in arg){
+			if(typeof(arg[cle]) != 'object'){
+				if(cle != "$text" && cle.charAt(0) == '$'){
+					att++;
+				}
+			}
+			item++;
+		}
+		if(item == att){
+			return true;
+		} else {
+			return false;
+		}
+	},
+	
+	// Function that check whether an object is an array
+	// @array: object
+	// @return: true if array is an array, else false
+	IsArray : function (array) {
+		return !!(array && array.constructor == Array);
 	}
-},
-
-// Check whether an object is an array
-IsArray : function (array) {
-	return !!(array && array.constructor == Array);
-}
 
 				
 } 
