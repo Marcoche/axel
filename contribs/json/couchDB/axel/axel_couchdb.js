@@ -142,7 +142,7 @@ couchDB_util.prototype = {
 		
 		/* // Developped version of MAP function
 		
-		var map = function(doc, keyword) {
+		var map = function(doc) {
 			if (doc.root) {	
 				var result = [];
 				
